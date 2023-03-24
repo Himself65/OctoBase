@@ -217,6 +217,11 @@ pub async fn make_token(
         }
     };
 
+    let seconds = match std::env::var("JWT_EXPIRE_SECONDS") {
+        Ok(val) => val.parse::<i64>().unwrap_or(10 * 60),
+        Err(_) => 10 * 60,
+    };
+
     match user {
         Ok(Some(user)) => {
             let Some(refresh) = refresh.or_else(|| {
@@ -234,7 +239,7 @@ pub async fn make_token(
             };
 
             let claims = Claims {
-                exp: Utc::now().naive_utc() + Duration::minutes(10),
+                exp: Utc::now().naive_utc() + Duration::seconds(seconds),
                 user: User {
                     id: user.id,
                     name: user.name,
@@ -348,6 +353,9 @@ mod test {
             .body(body_string)
             .send()
             .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let resp = client.post("/workspace").send().await;
         assert_eq!(resp.status(), StatusCode::OK);
     }
 
